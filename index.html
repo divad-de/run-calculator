@@ -802,7 +802,7 @@ else applyFreshDefaults();
 calculate();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/run-calculator/sw.js').catch(() => {});
 }
 </script>
 </body>

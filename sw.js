@@ -1,5 +1,5 @@
-const CACHE = 'runcalc-v5';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const CACHE = 'runcalc-v6';
+const ASSETS = ['/run-calculator/', '/run-calculator/index.html', '/run-calculator/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));

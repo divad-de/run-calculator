@@ -2,7 +2,7 @@
   "name": "Run Calculator",
   "short_name": "RunCalc",
   "description": "Calculate your return time for structured runs",
-  "start_url": "/",
+  "start_url": "/run-calculator/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
