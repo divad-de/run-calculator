@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RunCalc" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Run Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f172a;
+      --surface:   #1e293b;
+      --surface2:  #293548;
+      --border:    #334155;
+      --accent:    #38bdf8;
+      --text:      #f1f5f9;
+      --text-dim:  #94a3b8;
+      --radius:    14px;
+    }
+
+    html { height: 100%; background: var(--bg); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    }
+
+    header {
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 14px 20px 12px;
+      padding-top: calc(14px + env(safe-area-inset-top));
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; flex: 1; }
+    header .run-icon { font-size: 20px; }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .settings-btn:active { color: var(--accent); }
+    .settings-btn svg { width: 22px; height: 22px; }
+
+    main { padding: 18px 16px; max-width: 520px; margin: 0 auto; }
+
+    /* Result card */
+    .result-card {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+      border: 1px solid #0ea5e9;
+      border-radius: var(--radius);
+      padding: 20px 20px 18px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .result-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .result-time {
+      font-size: 64px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      color: #fff;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .result-time.empty { font-size: 40px; color: var(--text-dim); letter-spacing: 0; }
+    .result-seg-remain {
+      margin-top: 6px;
+      font-size: 14px;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+      min-height: 20px;
+    }
+    .result-seg-remain span { color: var(--text); }
+    .result-meta {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+    .result-meta strong { color: var(--text); }
+
+    /* Segment card */
+    .segment {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .seg-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .seg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .seg-title { font-size: 14px; font-weight: 600; flex: 1; }
+    .seg-dur-badge { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+    .zone-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .zone-select:focus { outline: 2px solid var(--accent); }
+
+    .seg-body {
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+    .field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      padding: 9px 11px;
+      -webkit-appearance: none;
+    }
+    .field input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-color: transparent;
+    }
+    .field input::placeholder { color: var(--border); }
+    .field input.invalid { outline: 2px solid #f87171; }
+
+    /* Summary */
+    .summary {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .summary-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .summary-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .summary-row .name { flex: 1; font-weight: 500; }
+    .summary-row .kdist { color: var(--text-dim); width: 56px; text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+    .summary-row .sdur  { color: var(--accent); width: 48px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    .turnaround-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      background: rgba(56,189,248,0.07);
+    }
+    .turnaround-row:last-child { border-bottom: none; }
+    .turnaround-row .icon { color: var(--accent); font-size: 14px; }
+    .turnaround-row .tlabel { flex: 1; color: var(--accent); font-weight: 600; }
+    .turnaround-row .val { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 700; }
+
+    .hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    /* ── Settings sheet ── */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .sheet-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 101;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 0 0 calc(24px + env(safe-area-inset-bottom));
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    .sheet.open { transform: translateY(0); }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .sheet-close {
+      background: var(--surface2);
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-close:active { color: var(--text); }
+
+    .sheet-body { padding: 16px 18px; }
+
+    .sheet-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-row:last-child { border-bottom: none; }
+
+    .sheet-row-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sheet-row-label {
+      font-size: 15px;
+      font-weight: 500;
+      flex: 1;
+    }
+    .sheet-row input {
+      width: 84px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
+      padding: 8px 10px;
+      text-align: center;
+      -webkit-appearance: none;
+    }
+    .sheet-row input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-color: transparent;
+    }
+    .sheet-row input.invalid { outline: 2px solid #f87171; }
+
+    .sheet-save {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      background: var(--accent);
+      color: #0f172a;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-save:active { opacity: 0.85; }
+
+    .sheet-reset {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-reset:active { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="run-icon">🏃</span>
+  <h1>Run Calculator</h1>
+  <button class="settings-btn" id="settingsBtn" aria-label="Default paces">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  </button>
+</header>
+
+<main>
+  <div class="result-card">
+    <div class="result-label">Remaining from turnaround</div>
+    <div class="result-time empty" id="resultTime">—</div>
+    <div class="result-seg-remain" id="resultSegRemain"></div>
+    <div class="result-meta" id="resultMeta"></div>
+  </div>
+
+  <div id="segments"></div>
+
+  <div class="summary" id="summaryBox" style="display:none">
+    <div class="summary-title">Breakdown</div>
+    <div id="summaryRows"></div>
+  </div>
+
+  <p class="hint">Duration in minutes · Pace as M:SS (e.g. 6:20)</p>
+</main>
+
+<!-- Settings sheet -->
+<div class="sheet-overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Default Paces</span>
+    <button class="sheet-close" id="sheetClose">Done</button>
+  </div>
+  <div class="sheet-body">
+    <div class="sheet-row">
+      <div class="sheet-row-dot" style="background:#94a3b8"></div>
+      <span class="sheet-row-label">Warm Up</span>
+      <input type="text" id="sp-warmup" inputmode="text" autocomplete="off" />
+    </div>
+    <div class="sheet-row">
+      <div class="sheet-row-dot" style="background:#4ade80"></div>
+      <span class="sheet-row-label">Zone 2</span>
+      <input type="text" id="sp-z2" inputmode="text" autocomplete="off" />
+    </div>
+    <div class="sheet-row">
+      <div class="sheet-row-dot" style="background:#facc15"></div>
+      <span class="sheet-row-label">Zone 3</span>
+      <input type="text" id="sp-z3" inputmode="text" autocomplete="off" />
+    </div>
+    <div class="sheet-row">
+      <div class="sheet-row-dot" style="background:#c084fc"></div>
+      <span class="sheet-row-label">Cool Down</span>
+      <input type="text" id="sp-cooldown" inputmode="text" autocomplete="off" />
+    </div>
+    <button class="sheet-save" id="sheetSave">Save defaults</button>
+    <button class="sheet-reset" id="sheetReset">Reset to factory defaults</button>
+  </div>
+</div>
+
+<script>
+// ── Factory defaults ──
+const FACTORY = {
+  warmup:   '6:45',
+  z2:       '6:20',
+  z3:       '5:35',
+  cooldown: '6:20',
+};
+
+const ZONE_META = {
+  z2: { label: 'Zone 2', color: '#4ade80' },
+  z3: { label: 'Zone 3', color: '#facc15' },
+};
+const FIXED_META = {
+  warmup:   { label: 'Warm Up',   color: '#94a3b8' },
+  cooldown: { label: 'Cool Down', color: '#c084fc' },
+};
+
+const STORAGE_KEY   = 'runcalc-v3';
+const DEFAULTS_KEY  = 'runcalc-defaults';
+
+// ── Default paces (factory or user-saved) ──
+function loadDefaults() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DEFAULTS_KEY));
+    if (d && d.warmup && d.z2 && d.z3 && d.cooldown) return d;
+  } catch {}
+  return { ...FACTORY };
+}
+
+function saveDefaults(d) {
+  localStorage.setItem(DEFAULTS_KEY, JSON.stringify(d));
+}
+
+// ── Pace helpers ──
+function parsePace(val) {
+  if (!val) return null;
+  const m = val.trim().match(/^(\d+):(\d{1,2})$/);
+  if (!m) return null;
+  const mins = parseInt(m[1], 10);
+  const secs = parseInt(m[2], 10);
+  if (secs >= 60 || (mins === 0 && secs === 0)) return null;
+  return mins + secs / 60;
+}
+
+function fmtMS(totalMins) {
+  const m = Math.floor(totalMins);
+  const s = Math.round((totalMins - m) * 60);
+  if (s === 60) return `${String(m + 1).padStart(2, '0')}:00`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// ── Build DOM ──
+function buildUI() {
+  const container = document.getElementById('segments');
+  container.appendChild(makeFixedCard('warmup'));
+  [1, 2].forEach(i => container.appendChild(makeZoneCard(i)));
+  container.appendChild(makeFixedCard('cooldown'));
+}
+
+function makeFixedCard(id) {
+  const def = FIXED_META[id];
+  const el = document.createElement('div');
+  el.className = 'segment';
+  el.innerHTML = `
+    <div class="seg-header">
+      <div class="seg-dot" style="background:${def.color}"></div>
+      <span class="seg-title">${def.label}</span>
+      <span class="seg-dur-badge" id="badge-${id}"></span>
+    </div>
+    <div class="seg-body">
+      <div class="field">
+        <label>Duration (min)</label>
+        <input type="number" id="dur-${id}" placeholder="0" min="0" step="1" inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label>Pace (m:ss /km)</label>
+        <input type="text" id="pace-${id}" inputmode="text" autocomplete="off" />
+      </div>
+    </div>`;
+  return el;
+}
+
+function makeZoneCard(i) {
+  const el = document.createElement('div');
+  el.className = 'segment';
+  el.id = `zone-card-${i}`;
+  el.innerHTML = `
+    <div class="seg-header">
+      <div class="seg-dot" id="dot-zone${i}" style="background:${ZONE_META.z2.color}"></div>
+      <span class="seg-title">Segment ${i}</span>
+      <select class="zone-select" id="sel-zone${i}">
+        <option value="z2">Zone 2</option>
+        <option value="z3">Zone 3</option>
+      </select>
+      <span class="seg-dur-badge" id="badge-zone${i}" style="margin-left:4px"></span>
+    </div>
+    <div class="seg-body">
+      <div class="field">
+        <label>Duration (min)</label>
+        <input type="number" id="dur-zone${i}" placeholder="0" min="0" step="1" inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label>Pace (m:ss /km)</label>
+        <input type="text" id="pace-zone${i}" inputmode="text" autocomplete="off" />
+      </div>
+    </div>`;
+  return el;
+}
+
+// ── Wire events ──
+function wireEvents() {
+  ['warmup', 'cooldown'].forEach(id => {
+    document.getElementById(`dur-${id}`).addEventListener('input', onInput);
+    document.getElementById(`pace-${id}`).addEventListener('input', onInput);
+  });
+  [1, 2].forEach(i => {
+    document.getElementById(`dur-zone${i}`).addEventListener('input', onInput);
+    document.getElementById(`pace-zone${i}`).addEventListener('input', onInput);
+    document.getElementById(`sel-zone${i}`).addEventListener('change', () => {
+      const zone = document.getElementById(`sel-zone${i}`).value;
+      document.getElementById(`dot-zone${i}`).style.background = ZONE_META[zone].color;
+      document.getElementById(`pace-zone${i}`).value = loadDefaults()[zone];
+      onInput();
+    });
+  });
+
+  // Settings sheet
+  document.getElementById('settingsBtn').addEventListener('click', openSheet);
+  document.getElementById('overlay').addEventListener('click', closeSheet);
+  document.getElementById('sheetClose').addEventListener('click', closeSheet);
+  document.getElementById('sheetSave').addEventListener('click', saveSheetDefaults);
+  document.getElementById('sheetReset').addEventListener('click', resetSheetDefaults);
+}
+
+function onInput() { saveState(); calculate(); }
+
+// ── Settings sheet ──
+function openSheet() {
+  const d = loadDefaults();
+  document.getElementById('sp-warmup').value   = d.warmup;
+  document.getElementById('sp-z2').value       = d.z2;
+  document.getElementById('sp-z3').value       = d.z3;
+  document.getElementById('sp-cooldown').value = d.cooldown;
+  ['sp-warmup','sp-z2','sp-z3','sp-cooldown'].forEach(id =>
+    document.getElementById(id).classList.remove('invalid'));
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function saveSheetDefaults() {
+  const ids = ['sp-warmup','sp-z2','sp-z3','sp-cooldown'];
+  const keys = ['warmup','z2','z3','cooldown'];
+  let valid = true;
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    const ok = !!parsePace(el.value);
+    el.classList.toggle('invalid', !ok);
+    if (!ok) valid = false;
+  });
+  if (!valid) return;
+
+  const d = {};
+  ids.forEach((id, i) => d[keys[i]] = document.getElementById(id).value.trim());
+  saveDefaults(d);
+
+  // Update placeholder text on main fields to reflect new defaults
+  applyDefaultPlaceholders(d);
+
+  closeSheet();
+}
+
+function resetSheetDefaults() {
+  document.getElementById('sp-warmup').value   = FACTORY.warmup;
+  document.getElementById('sp-z2').value       = FACTORY.z2;
+  document.getElementById('sp-z3').value       = FACTORY.z3;
+  document.getElementById('sp-cooldown').value = FACTORY.cooldown;
+  ['sp-warmup','sp-z2','sp-z3','sp-cooldown'].forEach(id =>
+    document.getElementById(id).classList.remove('invalid'));
+}
+
+function applyDefaultPlaceholders(d) {
+  document.getElementById('pace-warmup').placeholder   = d.warmup;
+  document.getElementById('pace-cooldown').placeholder = d.cooldown;
+  document.getElementById('pace-zone1').placeholder    = d[document.getElementById('sel-zone1').value];
+  document.getElementById('pace-zone2').placeholder    = d[document.getElementById('sel-zone2').value];
+}
+
+// ── Collect segments ──
+function collectSegments() {
+  const segs = [];
+  const d = loadDefaults();
+
+  const addFixed = (id) => {
+    const def = FIXED_META[id];
+    const dur = parseFloat(document.getElementById(`dur-${id}`).value) || 0;
+    const rawPace = document.getElementById(`pace-${id}`).value;
+    const paceStr = rawPace || d[id];
+    const pace = parsePace(paceStr);
+    document.getElementById(`pace-${id}`).classList.toggle('invalid', !!rawPace && !pace);
+    if (dur > 0 && pace) segs.push({ id, label: def.label, color: def.color, dur, pace, dist: dur / pace });
+  };
+
+  const addZone = i => {
+    const zone = document.getElementById(`sel-zone${i}`).value;
+    const def  = ZONE_META[zone];
+    const dur  = parseFloat(document.getElementById(`dur-zone${i}`).value) || 0;
+    const rawPace = document.getElementById(`pace-zone${i}`).value;
+    const paceStr = rawPace || d[zone];
+    const pace = parsePace(paceStr);
+    document.getElementById(`pace-zone${i}`).classList.toggle('invalid', !!rawPace && !pace);
+    if (dur > 0 && pace) segs.push({ id: `zone${i}`, label: `Segment ${i}`, color: def.color, dur, pace, dist: dur / pace });
+  };
+
+  addFixed('warmup');
+  addZone(1);
+  addZone(2);
+  addFixed('cooldown');
+  return segs;
+}
+
+// ── Calculate ──
+function calculate() {
+  ['warmup', 'cooldown', 'zone1', 'zone2'].forEach(id => {
+    const el = document.getElementById(`badge-${id}`);
+    if (el) el.textContent = '';
+  });
+
+  const segs        = collectSegments();
+  const resultEl    = document.getElementById('resultTime');
+  const segRemainEl = document.getElementById('resultSegRemain');
+  const metaEl      = document.getElementById('resultMeta');
+  const summaryBox  = document.getElementById('summaryBox');
+  const summaryRows = document.getElementById('summaryRows');
+
+  if (segs.length === 0) {
+    resultEl.textContent = '—';
+    resultEl.className = 'result-time empty';
+    segRemainEl.textContent = '';
+    metaEl.textContent = '';
+    summaryBox.style.display = 'none';
+    return;
+  }
+
+  const totalDist = segs.reduce((a, s) => a + s.dist, 0);
+  const totalTime = segs.reduce((a, s) => a + s.dur, 0);
+  const midDist   = totalDist / 2;
+
+  let accDist = 0, accTime = 0;
+  let turnaroundTime = null, turnaroundSegLabel = null, segRemainAfterTurn = 0;
+
+  for (const s of segs) {
+    if (accDist + s.dist >= midDist) {
+      const frac = (midDist - accDist) / s.dist;
+      turnaroundTime       = accTime + frac * s.dur;
+      turnaroundSegLabel   = s.label;
+      segRemainAfterTurn   = s.dur * (1 - frac);
+      break;
+    }
+    accDist += s.dist;
+    accTime += s.dur;
+  }
+
+  const remaining = totalTime - turnaroundTime;
+
+  resultEl.textContent = fmtMS(remaining);
+  resultEl.className = 'result-time';
+  segRemainEl.innerHTML = `(<span>${fmtMS(segRemainAfterTurn)}</span> remaining in ${turnaroundSegLabel})`;
+  metaEl.innerHTML =
+    `Turn around after <strong>${fmtMS(turnaroundTime)}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;` +
+    `Total <strong>${fmtMS(totalTime)}</strong>&nbsp;&nbsp;·&nbsp;&nbsp;` +
+    `<strong>${totalDist.toFixed(2)} km</strong>`;
+
+  segs.forEach(s => {
+    const el = document.getElementById(`badge-${s.id}`);
+    if (el) el.textContent = fmtMS(s.dur);
+  });
+
+  summaryBox.style.display = 'block';
+  let rows = '';
+  let cumDist = 0, cumTime = 0, markerInserted = false;
+
+  for (const s of segs) {
+    const prevDist = cumDist, prevTime = cumTime;
+    cumDist += s.dist;
+    cumTime += s.dur;
+
+    rows += `
+      <div class="summary-row">
+        <div class="dot" style="background:${s.color}"></div>
+        <span class="name">${s.label}</span>
+        <span class="kdist">${s.dist.toFixed(2)} km</span>
+        <span class="sdur">${fmtMS(s.dur)}</span>
+      </div>`;
+
+    if (!markerInserted && cumDist >= midDist) {
+      const frac = (midDist - prevDist) / s.dist;
+      const tTime = prevTime + frac * s.dur;
+      rows += `
+        <div class="turnaround-row">
+          <span class="icon">↩</span>
+          <span class="tlabel">Turnaround · ${midDist.toFixed(2)} km</span>
+          <span class="val">at ${fmtMS(tTime)}</span>
+        </div>`;
+      markerInserted = true;
+    }
+  }
+
+  summaryRows.innerHTML = rows;
+}
+
+// ── Persistence ──
+function saveState() {
+  const state = {};
+  ['warmup', 'cooldown'].forEach(id => {
+    state[`dur-${id}`]  = document.getElementById(`dur-${id}`).value;
+    state[`pace-${id}`] = document.getElementById(`pace-${id}`).value;
+  });
+  [1, 2].forEach(i => {
+    state[`dur-zone${i}`]  = document.getElementById(`dur-zone${i}`).value;
+    state[`pace-zone${i}`] = document.getElementById(`pace-zone${i}`).value;
+    state[`sel-zone${i}`]  = document.getElementById(`sel-zone${i}`).value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+}
+
+function applySessionState(saved) {
+  const d = loadDefaults();
+  ['warmup', 'cooldown'].forEach(id => {
+    if (saved[`dur-${id}`])  document.getElementById(`dur-${id}`).value  = saved[`dur-${id}`];
+    document.getElementById(`pace-${id}`).value = saved[`pace-${id}`] || '';
+    document.getElementById(`pace-${id}`).placeholder = d[id];
+  });
+  [1, 2].forEach(i => {
+    const zone = saved[`sel-zone${i}`] || 'z2';
+    document.getElementById(`sel-zone${i}`).value = zone;
+    document.getElementById(`dot-zone${i}`).style.background = ZONE_META[zone].color;
+    if (saved[`dur-zone${i}`])  document.getElementById(`dur-zone${i}`).value  = saved[`dur-zone${i}`];
+    document.getElementById(`pace-zone${i}`).value = saved[`pace-zone${i}`] || '';
+    document.getElementById(`pace-zone${i}`).placeholder = d[zone];
+  });
+}
+
+function applyFreshDefaults() {
+  const d = loadDefaults();
+  ['warmup', 'cooldown'].forEach(id => {
+    document.getElementById(`pace-${id}`).placeholder = d[id];
+  });
+  [1, 2].forEach(i => {
+    const zone = document.getElementById(`sel-zone${i}`).value;
+    document.getElementById(`pace-zone${i}`).placeholder = d[zone];
+  });
+}
+
+// ── Init ──
+buildUI();
+wireEvents();
+const saved = loadState();
+if (saved) applySessionState(saved);
+else applyFreshDefaults();
+calculate();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
